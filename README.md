@@ -24,18 +24,5 @@ Open: http://localhost:8000
 <img width="1911" height="953" alt="image" src="https://github.com/user-attachments/assets/fa54dc86-0d28-47b0-9387-5e5004bf620b" />
 
 
-## Structure
-research_finder/
-├── api/
-│   ├── views.py          # Home page + all API endpoints
-│   ├── nlp_service.py    # TF-IDF ranking & keyword extraction
-│   ├── pdf_service.py    # PyMuPDF text extraction
-│   ├── external_apis.py  # arXiv + Semantic Scholar
-│   └── urls.py
-├── config/
-│   ├── settings.py
-│   └── urls.py
-├── templates/
-│   └── index.html        # Complete frontend (HTML/CSS/JS)
 ├── manage.py
 └── requirements.txt
