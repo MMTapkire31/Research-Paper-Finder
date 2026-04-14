@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Research Paper Finder</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117; --bg2: #161b27; --bg3: #1e2535;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
+    --text: #e8eaf0; --muted: #8892a4;
+    --accent: #4f8ef7; --accent2: #38c4a8;
+    --danger: #e05c5c; --warning: #f0a844;
+    --r: 10px; --r-lg: 14px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; }
+
+  /* ── Header ── */
+  header { background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+  .header-inner { max-width: 960px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { font-size: 26px; }
+  .logo h1 { font-size: 17px; font-weight: 700; }
+  .logo p { font-size: 11px; color: var(--muted); }
+  .tab-group { display: flex; gap: 4px; }
+  .tab-btn { padding: 7px 16px; background: none; border: 1px solid var(--border); border-radius: var(--r); color: var(--muted); font-size: 13px; cursor: pointer; transition: all .15s; }
+  .tab-btn:hover { color: var(--text); border-color: var(--border2); }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Main ── */
+  main { max-width: 960px; margin: 0 auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
+  .panel { display: none; flex-direction: column; gap: 16px; }
+  .panel.active { display: flex; }
+
+  /* ── Search bar ── */
+  .search-row { display: flex; gap: 8px; }
+  .search-input { flex: 1; padding: 11px 16px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--r); color: var(--text); font-size: 15px; outline: none; transition: border-color .15s; }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+  .search-btn { padding: 11px 24px; background: var(--accent); color: #fff; border: none; border-radius: var(--r); font-size: 14px; font-weight: 600; cursor: pointer; min-width: 90px; transition: opacity .15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .search-btn:hover { opacity: .85; }
+  .search-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filters select { padding: 7px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); color: var(--text); font-size: 13px; outline: none; cursor: pointer; }
+  .quick-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .quick-label { font-size: 12px; color: var(--muted); }
+  .chip { padding: 4px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; color: var(--muted); font-size: 12px; cursor: pointer; transition: all .15s; }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Results ── */
+  .results-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+  .results-count { color: var(--text); }
+  .results-meta { color: var(--muted); }
+  .paper-list { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Paper card ── */
+  .paper-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; transition: border-color .15s; }
+  .paper-card:hover { border-color: var(--border2); }
+  .paper-card.open { border-color: var(--accent); }
+  .card-header { padding: 14px 18px; cursor: pointer; }
+  .card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .badge { font-size: 11px; padding: 2px 7px; border-radius: 4px; }
+  .badge-source { background: var(--accent); color: #fff; font-weight: 700; }
+  .badge-date { color: var(--muted); background: var(--bg3); }
+  .badge-cat { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); }
+  .badge-score { background: rgba(56,196,168,.12); border: 1px solid rgba(56,196,168,.3); color: var(--accent2); font-weight: 600; }
+  .badge-cite { background: rgba(240,168,68,.1); color: var(--warning); }
+  .card-title { font-size: 15px; font-weight: 600; line-height: 1.4; margin-bottom: 4px; }
+  .card-authors { font-size: 12px; color: var(--muted); }
+  .card-body { padding: 14px 18px 16px; border-top: 1px solid var(--border); display: none; flex-direction: column; gap: 12px; }
+  .paper-card.open .card-body { display: flex; }
+  .section-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 5px; }
+  .abstract-text { font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .kw-list { display: flex; flex-wrap: wrap; gap: 5px; }
+  .kw { font-size: 12px; padding: 3px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; color: var(--muted); }
+  .kw.accent { background: rgba(79,142,247,.07); border-color: rgba(79,142,247,.35); color: var(--accent); }
+  .analysis-box { background: var(--bg3); border-radius: var(--r); padding: 12px 14px; font-size: 13px; color: var(--text); line-height: 1.7; }
+  .analysis-box p { margin-bottom: 6px; }
+  .analysis-box p:last-child { margin-bottom: 0; }
+  .card-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 7px 14px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--r); color: var(--text); font-size: 13px; cursor: pointer; transition: all .15s; text-decoration: none; display: inline-block; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: rgba(79,142,247,.12); border-color: rgba(79,142,247,.4); color: var(--accent); }
+  .btn-primary:hover { background: rgba(79,142,247,.2); }
+
+  /* ── Upload ── */
+  .upload-zone { border: 2px dashed var(--border2); border-radius: var(--r-lg); padding: 48px 24px; text-align: center; cursor: pointer; transition: all .2s; }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(79,142,247,.04); }
+  .upload-zone .upload-icon { font-size: 40px; margin-bottom: 12px; }
+  .upload-zone .upload-label { font-size: 15px; margin-bottom: 6px; }
+  .upload-zone .upload-hint { font-size: 13px; color: var(--muted); }
+  .upload-loading { text-align: center; padding: 48px; }
+  .upload-loading p { font-size: 15px; margin: 16px 0 4px; }
+  .upload-loading span { font-size: 13px; color: var(--muted); }
+  .pdf-result { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .pdf-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .pdf-filename { font-size: 14px; font-weight: 600; }
+  .pdf-stats { font-size: 12px; color: var(--muted); }
+  .pdf-section { display: flex; flex-direction: column; gap: 5px; }
+  details.sec-detail { background: var(--bg3); border-radius: var(--r); padding: 8px 12px; font-size: 13px; }
+  details.sec-detail summary { cursor: pointer; font-weight: 600; color: var(--text); }
+  details.sec-detail p { color: var(--muted); margin-top: 8px; line-height: 1.6; }
+  .ref-list { font-size: 12px; color: var(--muted); padding-left: 18px; line-height: 1.8; }
+
+  /* ── Welcome ── */
+  .welcome-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .feature-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; }
+  .feature-icon { font-size: 24px; display: block; margin-bottom: 10px; }
+  .feature-card strong { font-size: 14px; display: block; margin-bottom: 5px; }
+  .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* ── Misc ── */
+  .error-box { padding: 12px 16px; background: rgba(224,92,92,.1); border: 1px solid rgba(224,92,92,.3); border-radius: var(--r); color: var(--danger); font-size: 14px; }
+  .empty-state { text-align: center; padding: 48px; color: var(--muted); font-size: 14px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+  .spinner-lg { width: 36px; height: 36px; border-width: 3px; border-color: var(--border2); border-top-color: var(--accent); margin: 0 auto; display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media(max-width: 600px) { .search-row { flex-direction: column; } .filters { flex-direction: column; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">🔬</span>
+      <div>
+        <h1>Research Paper Finder</h1>
+        <p>arXiv · Semantic Scholar · TF-IDF · PyMuPDF</p>
+      </div>
+    </div>
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchTab('search')">Search</button>
+      <button class="tab-btn" onclick="switchTab('upload')">Upload PDF</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Search Panel ── -->
+  <div id="searchPanel" class="panel active">
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="search-row">
+        <input id="searchInput" class="search-input" type="text" placeholder="Search by topic, keyword, author..." />
+        <button id="searchBtn" class="search-btn" onclick="doSearch()">Search</button>
+      </div>
+      <div class="filters">
+        <select id="selSource">
+          <option value="arxiv">arXiv</option>
+          <option value="semantic_scholar">Semantic Scholar</option>
+          <option value="both">Both sources</option>
+        </select>
+        <select id="selCategory">
+          <option value="">All categories</option>
+          <option value="cs.AI">cs.AI – Artificial Intelligence</option>
+          <option value="cs.LG">cs.LG – Machine Learning</option>
+          <option value="cs.CL">cs.CL – Computation & Language</option>
+          <option value="cs.CV">cs.CV – Computer Vision</option>
+          <option value="cs.RO">cs.RO – Robotics</option>
+          <option value="stat.ML">stat.ML – Statistics ML</option>
+        </select>
+        <select id="selMax">
+          <option value="5">5 results</option>
+          <option value="10" selected>10 results</option>
+          <option value="20">20 results</option>
+        </select>
+      </div>
+      <div class="quick-row">
+        <span class="quick-label">Quick:</span>
+        <button class="chip" onclick="quickSearch('large language models')">large language models</button>
+        <button class="chip" onclick="quickSearch('diffusion models')">diffusion models</button>
+        <button class="chip" onclick="quickSearch('RLHF')">RLHF</button>
+        <button class="chip" onclick="quickSearch('transformers attention')">transformers</button>
+        <button class="chip" onclick="quickSearch('graph neural networks')">graph neural networks</button>
+        <button class="chip" onclick="quickSearch('speech recognition dysarthria')">speech recognition</button>
+        <button class="chip" onclick="quickSearch('named entity recognition')">NER</button>
+      </div>
+    </div>
+
+    <div id="searchError"></div>
+    <div id="searchResults"></div>
+
+    <div id="welcomeBlock" class="welcome-grid">
+      <div class="feature-card"><span class="feature-icon">🔍</span><strong>Smart search</strong><p>Query arXiv and Semantic Scholar simultaneously with relevance ranking.</p></div>
+      <div class="feature-card"><span class="feature-icon">📊</span><strong>TF-IDF ranking</strong><p>Results sorted by cosine similarity — most relevant paper appears first.</p></div>
+      <div class="feature-card"><span class="feature-icon">📄</span><strong>PDF analysis</strong><p>Upload any paper PDF for keyword extraction and section parsing.</p></div>
+      <div class="feature-card"><span class="feature-icon">🔗</span><strong>Find similar</strong><p>Auto-discover related papers from keywords of any result.</p></div>
+    </div>
+
+  </div>
+
+  <!-- ── Upload Panel ── -->
+  <div id="uploadPanel" class="panel">
+    <div id="uploadZone" class="upload-zone"
+      onclick="document.getElementById('fileInput').click()"
+      ondragover="event.preventDefault(); this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <div class="upload-icon">📄</div>
+      <p class="upload-label">Drop a PDF here or click to browse</p>
+      <span class="upload-hint">Research papers, preprints · max 20MB</span>
+    </div>
+    <input id="fileInput" type="file" accept=".pdf" style="display:none" onchange="handleFileSelect(event)" />
+    <div id="uploadError"></div>
+    <div id="uploadResult"></div>
+  </div>
+
+</main>
+
+<script>
+// ── Tab switching ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (tab==='search'&&i===0)||(tab==='upload'&&i===1)));
+  document.getElementById('searchPanel').classList.toggle('active', tab==='search');
+  document.getElementById('uploadPanel').classList.toggle('active', tab==='upload');
+}
+
+// ── Search ──
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+function quickSearch(q) { searchInput.value = q; doSearch(); }
+
+async function doSearch() {
+  const q = searchInput.value.trim();
+  if (!q) return;
+  const source = document.getElementById('selSource').value;
+  const category = document.getElementById('selCategory').value;
+  const max = document.getElementById('selMax').value;
+  const btn = document.getElementById('searchBtn');
+  const errEl = document.getElementById('searchError');
+  const resEl = document.getElementById('searchResults');
+  const welcome = document.getElementById('welcomeBlock');
+
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  errEl.innerHTML = '';
+  resEl.innerHTML = '<div class="empty-state"><span class="spinner-lg spinner"></span><p style="margin-top:14px;color:var(--muted)">Searching papers...</p></div>';
+  welcome.style.display = 'none';
+
+  try {
+    const url = `/api/search/?q=${encodeURIComponent(q)}&source=${source}&max=${max}&category=${category}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Search failed');
+    renderResults(data, q);
+  } catch(e) {
+    errEl.innerHTML = `<div class="error-box">${e.message}</div>`;
+    resEl.innerHTML = '';
+  } finally {
+    btn.innerHTML = 'Search';
+    btn.disabled = false;
+  }
+}
+
+function renderResults(data, q) {
+  const el = document.getElementById('searchResults');
+  if (!data.results.length) {
+    el.innerHTML = '<div class="empty-state">No papers found. Try different keywords.</div>';
+    return;
+  }
+  let html = `<div class="results-header">
+    <span class="results-count">${data.count} paper${data.count!==1?'s':''} for <strong>"${esc(q)}"</strong></span>
+    <span class="results-meta">source: ${data.source} · ranked by TF-IDF</span>
+  </div><div class="paper-list">`;
+  data.results.forEach((p, i) => { html += buildCard(p, i); });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function buildCard(p, i) {
+  const authors = Array.isArray(p.authors)
+    ? p.authors.slice(0,3).join(', ') + (p.authors.length>3?' et al.':'')
+    : (p.authors || '');
+  const score = p.relevance_score != null ? Math.round(p.relevance_score * 100) : null;
+  const kws = p.summary?.keywords || [];
+  const cats = (p.categories || []).slice(0,2);
+
+  return `<div class="paper-card" id="card-${i}">
+    <div class="card-header" onclick="toggleCard(${i})">
+      <div class="card-meta">
+        <span class="badge badge-source">${p.source==='semantic_scholar'?'S2':'arXiv'}</span>
+        ${p.published?`<span class="badge badge-date">${esc(p.published)}</span>`:''}
+        ${cats.map(c=>`<span class="badge badge-cat">${esc(c)}</span>`).join('')}
+        ${score!==null?`<span class="badge badge-score">${score}% match</span>`:''}
+        ${p.citation_count!=null?`<span class="badge badge-cite">${p.citation_count} citations</span>`:''}
+      </div>
+      <div class="card-title">${esc(p.title)}</div>
+      ${authors?`<div class="card-authors">${esc(authors)}</div>`:''}
+    </div>
+    <div class="card-body" id="body-${i}">
+      ${p.abstract?`<div><span class="section-label">Abstract</span><p class="abstract-text">${esc(p.abstract)}</p></div>`:''}
+      ${kws.length?`<div><span class="section-label">Keywords (TF-IDF)</span><div class="kw-list">${kws.map(k=>`<span class="kw">${esc(k)}</span>`).join('')}</div></div>`:''}
+      <div id="analysis-${i}"></div>
+      <div class="card-actions">
+        <button class="btn btn-primary" onclick="analyzeCard(${i}, event)" id="analyze-btn-${i}">Analyze</button>
+        <button class="btn" onclick="findSimilarFromCard(${i})">Find similar</button>
+        ${p.html_url?`<a class="btn" href="${esc(p.html_url)}" target="_blank">View ↗</a>`:''}
+        ${p.pdf_url?`<a class="btn" href="${esc(p.pdf_url)}" target="_blank">PDF ↗</a>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleCard(i) {
+  const card = document.getElementById('card-'+i);
+  card.classList.toggle('open');
+}
+
+// store paper data for actions
+let _papers = [];
+function renderResults(data, q) {
+  _papers = data.results;
+  const el = document.getElementById('searchResults');
+  if (!data.results.length) { el.innerHTML = '<div class="empty-state">No papers found.</div>'; return; }
+  let html = `<div class="results-header">
+    <span class="results-count">${data.count} paper${data.count!==1?'s':''} for <strong>"${esc(q)}"</strong></span>
+    <span class="results-meta">source: ${data.source} · ranked by TF-IDF</span>
+  </div><div class="paper-list">`;
+  data.results.forEach((p,i) => { html += buildCard(p,i); });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function analyzeCard(i, e) {
+  e.stopPropagation();
+  const p = _papers[i];
+  if (!p) return;
+  const btn = document.getElementById('analyze-btn-'+i);
+  const box = document.getElementById('analysis-'+i);
+  btn.disabled = true; btn.textContent = 'Analyzing...';
+  try {
+    const resp = await fetch('/api/analyze/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({title: p.title, abstract: p.abstract})
+    });
+    const data = await resp.json();
+    let html = '<div class="analysis-box">';
+    if (data.summary?.contribution) html += `<p><strong>Contribution:</strong> ${esc(data.summary.contribution)}</p>`;
+    if (data.summary?.method) html += `<p><strong>Method:</strong> ${esc(data.summary.method)}</p>`;
+    if (data.summary?.results) html += `<p><strong>Results:</strong> ${esc(data.summary.results)}</p>`;
+    html += '</div>';
+    if (data.keywords?.length) {
+      html += `<div style="margin-top:8px"><span class="section-label">Deep keywords</span><div class="kw-list">${data.keywords.map(k=>`<span class="kw accent">${esc(k)}</span>`).join('')}</div></div>`;
+    }
+    box.innerHTML = html;
+    btn.textContent = 'Re-analyze'; btn.disabled = false;
+  } catch(err) {
+    box.innerHTML = `<div class="error-box" style="font-size:13px">${err.message}</div>`;
+    btn.textContent = 'Analyze'; btn.disabled = false;
+  }
+}
+
+async function findSimilarFromCard(i) {
+  const p = _papers[i];
+  if (!p) return;
+  const kws = p.summary?.keywords || [];
+  const query = kws.slice(0,4).join(' ') || p.title;
+  searchInput.value = query;
+  switchTab('search');
+  await doSearch();
+}
+
+// ── PDF Upload ──
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag');
+  processFile(e.dataTransfer.files[0]);
+}
+function handleFileSelect(e) { processFile(e.target.files[0]); }
+
+async function processFile(file) {
+  const errEl = document.getElementById('uploadError');
+  const resEl = document.getElementById('uploadResult');
+  const zone = document.getElementById('uploadZone');
+  errEl.innerHTML = '';
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.pdf')) { errEl.innerHTML = '<div class="error-box">Please upload a PDF file.</div>'; return; }
+  if (file.size > 20*1024*1024) { errEl.innerHTML = '<div class="error-box">File too large. Max 20MB.</div>'; return; }
+
+  zone.style.display = 'none';
+  resEl.innerHTML = `<div class="upload-loading"><span class="spinner-lg spinner"></span><p>Extracting text with PyMuPDF...</p><span>Running TF-IDF keyword analysis</span></div>`;
+
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const resp = await fetch('/api/upload/', { method: 'POST', body: form });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Upload failed');
+    renderPDFResult(data);
+  } catch(e) {
+    errEl.innerHTML = `<div class="error-box">${e.message}</div>`;
+    resEl.innerHTML = '';
+    zone.style.display = '';
+  }
+}
+
+function renderPDFResult(d) {
+  const el = document.getElementById('uploadResult');
+  const kws = d.keywords || [];
+  const sections = d.sections || [];
+  const refs = d.references || [];
+
+  let html = `<div class="pdf-result">
+    <div class="pdf-header">
+      <span class="pdf-filename">📄 ${esc(d.filename)}</span>
+      <span class="pdf-stats">${d.page_count} pages · ${(d.word_count||0).toLocaleString()} words</span>
+    </div>`;
+
+  if (d.title) html += `<div class="pdf-section"><span class="section-label">Title</span><p style="font-size:15px;font-weight:600;line-height:1.4">${esc(d.title)}</p></div>`;
+  if (d.authors) html += `<div class="pdf-section"><span class="section-label">Authors</span><p style="font-size:13px;color:var(--muted)">${esc(d.authors)}</p></div>`;
+  if (d.abstract) html += `<div class="pdf-section"><span class="section-label">Abstract</span><p class="abstract-text">${esc(d.abstract)}</p></div>`;
+
+  if (kws.length) html += `<div class="pdf-section"><span class="section-label">Keywords (TF-IDF)</span>
+    <div class="kw-list">${kws.map(k=>`<span class="kw accent">${esc(k)}</span>`).join('')}</div></div>`;
+
+  if (d.summary?.contribution) html += `<div class="pdf-section"><span class="section-label">Core contribution</span><p style="font-size:13px;color:var(--muted)">${esc(d.summary.contribution)}</p></div>`;
+
+  if (sections.length) {
+    html += `<div class="pdf-section"><span class="section-label">Sections (${sections.length})</span>`;
+    sections.forEach(s => {
+      html += `<details class="sec-detail"><summary>${esc(s.title)}</summary><p>${esc(s.content)}</p></details>`;
+    });
+    html += '</div>';
+  }
+
+  if (refs.length) {
+    html += `<div class="pdf-section"><span class="section-label">References</span><ol class="ref-list">`;
+    refs.forEach(r => { html += `<li>${esc(r)}</li>`; });
+    html += '</ol></div>';
+  }
+
+  html += `<div class="card-actions">
+    <button class="btn btn-primary" onclick="findSimilarFromPDF()">Find similar on arXiv</button>
+    <button class="btn" onclick="resetUpload()">Upload another</button>
+  </div></div>`;
+  el.innerHTML = html;
+  window._pdfResult = d;
+}
+
+async function findSimilarFromPDF() {
+  const d = window._pdfResult;
+  if (!d) return;
+  const query = (d.keywords||[]).slice(0,4).join(' ') || d.title || '';
+  document.getElementById('searchInput').value = query;
+  switchTab('search');
+  await doSearch();
+}
+
+function resetUpload() {
+  document.getElementById('uploadResult').innerHTML = '';
+  document.getElementById('uploadError').innerHTML = '';
+  document.getElementById('uploadZone').style.display = '';
+  document.getElementById('fileInput').value = '';
+}
+
+// ── Utility ──
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+</body>
+</html>
