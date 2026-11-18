@@ -1,9 +1,32 @@
 import re
 import math
+from functools import lru_cache
 from collections import Counter
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+
+
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_MODEL_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+
+
+class SemanticSearchUnavailable(RuntimeError):
+    pass
+
+
+@lru_cache(maxsize=1)
+def _get_embedding_model():
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError as exc:
+        raise SemanticSearchUnavailable(
+            "Semantic search dependencies are missing. Install requirements.txt."
+        ) from exc
+    return SentenceTransformer(
+        EMBEDDING_MODEL_NAME,
+        revision=EMBEDDING_MODEL_REVISION,
+    )
 
 
 def clean_text(text: str) -> str:
@@ -70,6 +93,55 @@ def rank_papers_tfidf(query: str, papers: list[dict]) -> list[dict]:
         for p in papers:
             p['relevance_score'] = 0.0
 
+    return papers
+
+
+def rank_papers_semantic(query: str, papers: list[dict]) -> list[dict]:
+    """Rank papers by cosine similarity between sentence-transformer embeddings."""
+    if not papers:
+        return papers
+
+    documents = [
+        f"{paper.get('title', '')} {paper.get('abstract', '')}".strip()
+        for paper in papers
+    ]
+    indexed_positions = [i for i, document in enumerate(documents) if document]
+    for paper in papers:
+        paper['relevance_score'] = 0.0
+    if not query.strip() or not indexed_positions:
+        return papers
+
+    try:
+        import faiss
+    except ImportError as exc:
+        raise SemanticSearchUnavailable(
+            "Semantic search dependencies are missing. Install requirements.txt."
+        ) from exc
+
+    model = _get_embedding_model()
+    vectors = model.encode(
+        [documents[i] for i in indexed_positions],
+        normalize_embeddings=True,
+        convert_to_numpy=True,
+        show_progress_bar=False,
+    )
+    vectors = np.ascontiguousarray(vectors, dtype=np.float32)
+    query_vector = model.encode(
+        [query],
+        normalize_embeddings=True,
+        convert_to_numpy=True,
+        show_progress_bar=False,
+    )
+    query_vector = np.ascontiguousarray(query_vector, dtype=np.float32)
+
+    index = faiss.IndexFlatIP(vectors.shape[1])
+    index.add(vectors)
+    scores, result_positions = index.search(query_vector, len(indexed_positions))
+    for score, result_position in zip(scores[0], result_positions[0]):
+        paper_position = indexed_positions[int(result_position)]
+        papers[paper_position]['relevance_score'] = round(float(score), 4)
+
+    papers.sort(key=lambda paper: paper['relevance_score'], reverse=True)
     return papers
 
 

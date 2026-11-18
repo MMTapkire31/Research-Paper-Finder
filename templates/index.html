@@ -186,7 +186,7 @@
 
     <div id="welcomeBlock" class="welcome-grid">
       <div class="feature-card"><span class="feature-icon">🔍</span><strong>Smart search</strong><p>Query arXiv and Semantic Scholar simultaneously with relevance ranking.</p></div>
-      <div class="feature-card"><span class="feature-icon">📊</span><strong>TF-IDF ranking</strong><p>Results sorted by cosine similarity — most relevant paper appears first.</p></div>
+      <div class="feature-card"><span class="feature-icon">📊</span><strong>Semantic ranking</strong><p>Results sorted by sentence-embedding similarity — most relevant paper appears first.</p></div>
       <div class="feature-card"><span class="feature-icon">📄</span><strong>PDF analysis</strong><p>Upload any paper PDF for keyword extraction and section parsing.</p></div>
       <div class="feature-card"><span class="feature-icon">🔗</span><strong>Find similar</strong><p>Auto-discover related papers from keywords of any result.</p></div>
     </div>
@@ -265,7 +265,7 @@ function renderResults(data, q) {
   }
   let html = `<div class="results-header">
     <span class="results-count">${data.count} paper${data.count!==1?'s':''} for <strong>"${esc(q)}"</strong></span>
-    <span class="results-meta">source: ${data.source} · ranked by TF-IDF</span>
+    <span class="results-meta">source: ${data.source} · ranked by semantic similarity</span>
   </div><div class="paper-list">`;
   data.results.forEach((p, i) => { html += buildCard(p, i); });
   html += '</div>';
@@ -319,7 +319,7 @@ function renderResults(data, q) {
   if (!data.results.length) { el.innerHTML = '<div class="empty-state">No papers found.</div>'; return; }
   let html = `<div class="results-header">
     <span class="results-count">${data.count} paper${data.count!==1?'s':''} for <strong>"${esc(q)}"</strong></span>
-    <span class="results-meta">source: ${data.source} · ranked by TF-IDF</span>
+    <span class="results-meta">source: ${data.source} · ranked by semantic similarity</span>
   </div><div class="paper-list">`;
   data.results.forEach((p,i) => { html += buildCard(p,i); });
   html += '</div>';

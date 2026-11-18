@@ -6,7 +6,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
 from .external_apis import search_arxiv, search_semantic_scholar
-from .nlp_service import rank_papers_tfidf, summarize_abstract, extract_keywords
+from .nlp_service import (
+    SemanticSearchUnavailable,
+    rank_papers_semantic,
+    rank_papers_tfidf,
+    summarize_abstract,
+    extract_keywords,
+)
 from .pdf_service import extract_text_from_pdf, extract_references
 
 
@@ -30,7 +36,10 @@ class SearchView(View):
             papers.extend(search_semantic_scholar(query, max_results=max_results))
         if not papers:
             return JsonResponse({'results': [], 'count': 0, 'query': query})
-        papers = rank_papers_tfidf(query, papers)
+        try:
+            papers = rank_papers_semantic(query, papers)
+        except SemanticSearchUnavailable as exc:
+            return JsonResponse({'error': str(exc)}, status=503)
         seen, unique = set(), []
         for p in papers:
             key = p['title'].lower()[:60]
