@@ -1,9 +1,11 @@
 from pathlib import Path
+import os
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = 'django-insecure-research-finder-key-change-in-prod'
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-local-dev-only')
+DEBUG = not os.environ.get('RENDER')   # Render sets RENDER automatically
+ALLOWED_HOSTS = [".onrender.com", "localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
     'django.contrib.staticfiles',
